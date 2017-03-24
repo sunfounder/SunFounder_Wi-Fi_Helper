@@ -39,6 +39,10 @@ Feel free to fork and pull.
 <a id="update"></a>
 ### Update:
 2017-03-24:
+ - V1.1.0 New Release
+ - Add debug messages
+ - Re-organized script
+2017-03-24:
  - V1.0.0 New Release
 
 ----------------------------------------------
