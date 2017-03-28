@@ -38,6 +38,10 @@ Feel free to fork and pull.
 
 <a id="update"></a>
 ### Update:
+2017-03-28:
+ - V1.2.0 
+ - Fix bugs
+ - add choosable hostname
 2017-03-24:
  - V1.1.0 New Release
  - Add debug messages

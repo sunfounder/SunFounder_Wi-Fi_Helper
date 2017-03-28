@@ -7,11 +7,11 @@ class WiFiHelper(object):
     import os
     import _thread
     import socket
-    from platform import system as system_name # Returns the system/OS name
     from os import system as system_call       # Execute a shell command
     import time
+    import sys
 
-    VERSION = "v1.1.0"
+    VERSION = "v1.2.0"
     COMPANY = "SunFounder     www.sunfounder.com"
 
     BACKGROUND_COLOR = '#EEEEEE'
@@ -52,12 +52,13 @@ class WiFiHelper(object):
         self.disk_menu     = self.tk.OptionMenu(self.frame_1_2, self.disk, *disks)
         disk_reflash       = self.tk.Button(self.frame_1_2, width=7, text='Reflash')
         ssid_label         = self.tk.Label(frame_1_3, text="SSID: ", fg=self.FOREGROUND_COLOR)
-        self.ssid_input         = self.tk.Entry(frame_1_3, bg=self.BACKGROUND_COLOR, fg=self.FOREGROUND_COLOR)
+        self.ssid_input    = self.tk.Entry(frame_1_3, bg=self.BACKGROUND_COLOR, fg=self.FOREGROUND_COLOR)
         passwd_label       = self.tk.Label(frame_1_4, text="PASSWORD: ", fg=self.FOREGROUND_COLOR)
-        self.passwd_input       = self.tk.Entry(frame_1_4, bg=self.BACKGROUND_COLOR, fg=self.FOREGROUND_COLOR)
+        self.passwd_input  = self.tk.Entry(frame_1_4, bg=self.BACKGROUND_COLOR, fg=self.FOREGROUND_COLOR)
         ssh_check          = self.tk.Checkbutton(frame_1_5, text="Enable SSH", variable=self.enabled_ssh)
         message_lable      = self.tk.Label(frame_1_6, textvariable=self.message, fg=self.ERROR_COLOR)
         confirm_button     = self.tk.Button(frame_1_7, width=10, text='Confirm')
+        self.keyword_input = self.tk.Entry(frame_1_8, bg=self.BACKGROUND_COLOR, fg=self.FOREGROUND_COLOR)
         search_button      = self.tk.Button(frame_1_8, width=20, text='Search Raspberry Pi')
         self.ip_listbox    = self.tk.Listbox(frame_1_9, width=50, height=200)
         debug_label        = self.tk.Label(frame_2_1, text="Debug:", fg=self.FOREGROUND_COLOR)
@@ -97,7 +98,8 @@ class WiFiHelper(object):
         ssh_check.pack()
         message_lable.pack(side=self.tk.LEFT)
         confirm_button.pack(side=self.tk.RIGHT)
-        search_button.pack(side=self.tk.LEFT)
+        self.keyword_input.pack(side=self.tk.LEFT)
+        search_button.pack(side=self.tk.RIGHT)
         self.ip_listbox.pack(fill="x")
 
         debug_label.pack(side=self.tk.LEFT)
@@ -112,6 +114,7 @@ class WiFiHelper(object):
         confirm_button.bind('<ButtonRelease-1>', self.confirm)
         search_button.bind('<ButtonRelease-1>', self.search)
         disk_reflash.bind('<ButtonRelease-1>', self.reflash)
+        self.keyword_input.insert(0, 'raspberrypi')
         ssh_check.select()
         #self.ip_listbox.config(state=self.tk.DISABLED)
         #self.debug_listbox.config(state=self.tk.DISABLED)
@@ -177,6 +180,7 @@ class WiFiHelper(object):
 
     def search(self, event):
         self.debug("Searching...")
+        keyword = self.keyword_input.get()
         self.ip_listbox.delete(0, self.tk.END)
         my_name = self.socket.getfqdn(self.socket.gethostname())
         my_address = self.socket.gethostbyname(my_name)
@@ -185,47 +189,36 @@ class WiFiHelper(object):
         self.debug('My Name: %s' % my_name)
         self.debug('My Address: %s' % my_address)
         self.debug('Gateway: %s' % gateway+'0')
-        self.count = 0
-        for i in range(1,255):
+        ip_from = 1
+        ip_to   = 255
+        ip_to += 1
+        for i in range(ip_from, ip_to):
             ip = gateway+'%d'%i
-            self._thread.start_new_thread(self.search_ip, (ip,))
-            #search_ip(ip)
-        self.debug('Done!')
-        if self.count == 0:
-            self.debug("No Raspberry Pi found.")
-        else:
-            self.debug("Found %d Raspberry Pi" % self.count)
+            self._thread.start_new_thread(self.search_ip, (keyword,ip,))
+            #self.search_ip(keyword,ip)
 
-    def search_ip(self, ip):
+    def search_ip(self, keyword, ip):
         try:
             host = self.socket.gethostbyaddr(ip)
             host = host[0].split('.')[0]
-            if host == 'raspberrypi':
-                status = ping(ip)
-                self.debug(status)
+            #self.debug('  host: "%s"'%host)
+            if keyword in '%s'%host:
+                self.debug('Found host: "%s"'%host)
+                status = self.ping(ip)
                 if status:
-                    self.debug('host: %s@%s' % (host,ip))
+                    #self.debug('host: %s@%s' % (host,ip))
                     self.ip_listbox.insert(self.tk.END, '%s@%s' % (host,ip))
-                    count += 1
+                else:
+                    self.debug('%s@%s ping failed'%(host,ip))
         except:
             pass
-            #self.debug("Unexpected error: %s" % sys.exc_info()[0])
-
 
     def ping(self, host):
-        """
-        Returns True if host (str) responds to a ping request.
-        Remember that some hosts may not respond to a ping request even if the host name is valid.
-        """
-
-        # Ping parameters as function of OS
-        parameters = "-n 1" if system_name().lower()=="windows" else "-c 1"
-
-        # Pinging
-        return system_call("ping " + parameters + " " + host) == 0
+        return self.system_call("ping -n 1 " + host) == 0
 
     def debug(self, messages):
         localtime = self.time.asctime(self.time.localtime(self.time.time()))
+        messages = "%s" % messages
         messages = messages.split('\n')
         for m in messages:
             m = str(localtime) + "    " + m
